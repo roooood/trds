@@ -112,10 +112,10 @@ module.exports = {
             let token = jwt.sign({ id: user.id }, settings.privateKey);
             req.models.user.get(user.id, function (err, newUser) {
                 newUser.token = token;
-                newUser.password = md5(newUser.password);
+                newUser.password = md5(user.password);
                 newUser.save();
+                return res.send({ success: true, data: newUser.serialize() });
             });
-            return res.send({ success: true, data: { username: user.username, token: token } });
         });
 
     },
@@ -149,7 +149,7 @@ module.exports = {
             if (user.length > 0) {
                 // user[0].lastSeen = new Date();
                 // user[0].save();
-                res.send({ success: true, data: { username: user[0].username, token: user[0].token } })
+                res.send({ success: true, data: user[0].serialize() })
             }
             else {
                 res.send({ success: false, message: "loginFailed" })

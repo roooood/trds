@@ -25,4 +25,7 @@ module.exports = function (app) {
   app.post('/user/email_change', checkLogin, controllers.user.emailUpdate);
   app.post('/user/password_change', checkLogin, controllers.user.passwordUpdate);
   app.post('/user/delete_account', checkLogin, controllers.user.delete);
+
+  app.get('/market/new', controllers.market.new);
+  app.get('/market/list/:type', controllers.market.list);
 };

@@ -1,11 +1,12 @@
 
-
 module.exports = function (orm, db) {
   var User = db.define('user', {
     id: { type: 'serial', key: true },
     username: { type: 'text', required: true, unique: true },
     password: { type: 'text', required: true },
     email: { type: 'text', required: true, unique: true },
+    realBalance: Number,
+    practiceBalance: Number,
     joinedAt: { type: 'date', required: true, time: true },
     lastSeen: { type: 'date', required: true, time: true },
     status: Boolean,
@@ -13,11 +14,12 @@ module.exports = function (orm, db) {
   },
     {
       hooks: {
-        beforeCreate: function () {
+        beforeValidation: function () {
           this.joinedAt = new Date();
           this.lastSeen = new Date();
           this.status = true;
-          this.password = md5(this.password);
+          this.realBalance = 0;
+          this.practiceBalance = 10000;
         }
       },
       validations: {
@@ -36,12 +38,12 @@ module.exports = function (orm, db) {
       methods: {
         serialize: function () {
           return {
-            id: this.id,
             username: this.username,
-            email: this.email,
-            joinedAt: this.joinedAt,
-            lastSeen: this.lastSeen,
-            status: this.status,
+            balance: {
+              real: this.realBalance,
+              practice: this.practiceBalance,
+            },
+            token: this.token,
           };
         }
       }
