@@ -6,7 +6,10 @@ var connection = null;
 function setup(db, cb) {
   require('./user')(orm, db);
   require('./market')(orm, db);
-
+  require('./tokens')(orm, db);
+  require('./order')(orm, db);
+  require('./setting')(orm, db);
+  // db.sync();
   return cb(null, db);
 }
 

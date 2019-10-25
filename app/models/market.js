@@ -13,12 +13,11 @@ module.exports = function (orm, db) {
           return {
             id: this.id,
             type: this.type,
-            symbol: this.symbol,
             display: this.display,
             description: this.description,
           };
         }
       }
     });
-  db.sync();
+  Market.sync();
 };

@@ -48,5 +48,5 @@ module.exports = function (orm, db) {
         }
       }
     });
-  db.sync();
+  User.sync();
 };
