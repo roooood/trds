@@ -30,18 +30,19 @@ class Server extends colyseus.Room {
     }
     refreshConfigData() {
         let item;
-        this.models.tokens.find().all((err, tokens) => {
-            if (err) return next(err);
-            for (item of tokens) {
-                if (!item.token in this.tokens) {
-                    this.tokens[item.token] = 0;
-                }
-            }
-        })
+
         this.models.setting.find().all((err, setting) => {
             if (err) return next(err);
             for (item of setting) {
                 this.setting[item.key] = item.value;
+            }
+        })
+        this.models.tokens.find().all((err, tokens) => {
+            if (err) return next(err);
+            for (item of tokens) {
+                if (!(item.token in this.tokens)) {
+                    this.tokens[item.token] = 0;
+                }
             }
         })
     }
@@ -74,16 +75,17 @@ class Server extends colyseus.Room {
         this.send(client, {
             welcome: {
                 user,
-                token
+                token,
+                setting: this.setting
             }
         });
         this.users['u' + auth.id] = user;
     }
     getToken() {
         let i, j;
-        for (j = 0; i < 10; j++) {
+        for (j = 0; j < 10; j++) {
             for (i in this.tokens) {
-                if (this.tokens[i] == j) {
+                if (this.tokens[i] === j) {
                     this.tokens[i] = j + 1;
                     return i;
                 }
@@ -92,13 +94,11 @@ class Server extends colyseus.Room {
     }
     onMessage(client, message) {
         let type, value;
-        for (type in this.message) {
+        for (type in message) {
             value = message[type];
             switch (type) {
                 case 'trade':
-                    console.log('================= buy ==============');
-                    console.log(value);
-                    console.log('====================================');
+                    this.trade(client, value);
                     break;
             }
         }
@@ -112,6 +112,7 @@ class Server extends colyseus.Room {
     }
 
     trade(client, { balanceType, tradeType, bet, marketId, point, tradeAt }) {
+
         if (client.balance[balanceType] > bet) {
             this.models.market.get(marketId, (err, market) => {
                 if (err) {
@@ -121,19 +122,24 @@ class Server extends colyseus.Room {
                     let data = {
                         balanceType,
                         tradeType,
-                        market: market.id,
                         symbol: market.symbol,
                         point,
                         tradeAt: point + (tradeAt * 60),
                         bet,
-                        profit: this.profit,
+                        profit: parseInt(this.setting.profit),
+                        market_id: market.id,
+                        user_id: client.id,
                     }
                     this.models.order.create(data, (err, order) => {
                         if (err) {
                             this.send(client, { error: 'order' });
                         }
                         else {
-                            this.send(client, { order: { point, } });
+                            this.send(client, { order: { point } });
+
+                            let newBalance = client.balance[balanceType] - bet;
+                            client.balance[balanceType] = client.balance[balanceType] - bet;
+                            this.send(client, { balance: { type: balanceType, balance: newBalance } });
                         }
                     })
                 }

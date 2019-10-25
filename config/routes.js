@@ -8,7 +8,7 @@ module.exports = function (app) {
 
   var server = http.createServer(app)
   var gameServer = new colyseus.Server({ server: server })
-  gameServer.register('domino', ServerIO)
+  gameServer.register('trade', ServerIO)
   server.listen(settings.port)
 
   var checkLogin = function (req, res, next) {

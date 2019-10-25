@@ -4,8 +4,8 @@ module.exports = function (orm, db) {
     id: { type: 'serial', key: true },
     balanceType: ["real", "practice"],
     tradeType: ["buy", "sell"],
-    market: String,
-    symbol: String,
+    // market: String,
+    // symbol: String,
     point: { type: 'integer' },
     tradeAt: { type: 'integer' },
     status: ["pending", "done"],
@@ -21,6 +21,7 @@ module.exports = function (orm, db) {
           this.status = 'pending';
         }
       },
+    },
     {
       methods: {
         serialize: function () {
@@ -31,5 +32,6 @@ module.exports = function (orm, db) {
       }
     });
   Order.hasOne('user', db.models.user, { required: true, autoFetch: false, reverse: 'order' });
+  Order.hasOne('market', db.models.market, { required: true, autoFetch: false, reverse: 'order' });
   Order.sync();
 };

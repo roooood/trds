@@ -24,35 +24,11 @@ function hub2db(data, market) {
 }
 module.exports = {
     history: function (req, res, next) {
-        let params = _.pick(req.body, 'market', 'resolution');
-        let table = tbl[params.resolution];
-        let childGet = 'get' + table.charAt(0).toUpperCase() + table.slice(1);
-        let resolution = rsl[params.resolution];
-        req.models.market.get(params.market, function (err, market) {
-            market[childGet](function (err, candles) {
-                let candle, ret = [];
-                if (candles.length == 0) {
-                    let api = url.replace('@', market.type).replace('#', market.symbol).replace('!', resolution);
-                    request(api, function (error, response, body) {
-                        body = JSON.parse(body);
-                        if (typeof body == 'object') {
-                            let data = hub2db(body, market.id);
-                            req.models[table].create(data, function (err, candles) {
-                                for (candle of candles) {
-                                    ret.push(candle.serialize())
-                                }
-                                return res.send(ret);
-                            })
-                        }
-                    });
-                }
-                else {
-                    for (candle of candles) {
-                        ret.push(candle.serialize())
-                    }
-                    return res.send(ret);
-                }
-            })
+        let params = _.pick(req.body, 'url');
+
+        request(params.url, function (error, response, body) {
+            return res.send(body);
         });
+
     },
 };
