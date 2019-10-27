@@ -1,6 +1,7 @@
 var colyseus = require('colyseus');
 var models = require('../app/models/');
 var request = require('request');
+var canddleUrl = 'https://finnhub.io/api/v1/{type}/candle?symbol={symbol}&resolution=1&count=1&token={token}';
 
 class State {
     constructor() {
@@ -81,12 +82,12 @@ class Server extends colyseus.Room {
         });
         this.users['u' + auth.id] = user;
     }
-    getToken() {
+    getToken(temp = false) {
         let i, j;
         for (j = 0; j < 10; j++) {
             for (i in this.tokens) {
                 if (this.tokens[i] === j) {
-                    this.tokens[i] = j + 1;
+                    this.tokens[i] = temp ? j : j + 1;
                     return i;
                 }
             }
@@ -111,7 +112,7 @@ class Server extends colyseus.Room {
 
     }
 
-    trade(client, { balanceType, tradeType, bet, marketId, point, tradeAt }) {
+    trade(client, { balanceType, tradeType, bet, marketId, tradeAt }) {
 
         if (client.balance[balanceType] > bet) {
             this.models.market.get(marketId, (err, market) => {
@@ -119,28 +120,29 @@ class Server extends colyseus.Room {
                     this.send(client, { error: 'market' });
                 }
                 else {
-                    let data = {
-                        balanceType,
-                        tradeType,
-                        symbol: market.symbol,
-                        point,
-                        tradeAt: point + (tradeAt * 60),
-                        bet,
-                        profit: parseInt(this.setting.profit),
-                        market_id: market.id,
-                        user_id: client.id,
-                    }
-                    this.models.order.create(data, (err, order) => {
-                        if (err) {
-                            this.send(client, { error: 'order' });
+                    this.getCandle(market, (candle) => {
+                        let data = {
+                            balanceType,
+                            tradeType,
+                            point: candle.point,
+                            tradeAt: candle.point + (tradeAt * 60),
+                            bet,
+                            profit: parseInt(this.setting.profit),
+                            market_id: market.id,
+                            user_id: client.id,
                         }
-                        else {
-                            this.send(client, { order: { point } });
+                        this.models.order.create(data, (err, order) => {
+                            if (err) {
+                                this.send(client, { error: 'order' });
+                            }
+                            else {
+                                this.send(client, { order: [order] });
 
-                            let newBalance = client.balance[balanceType] - bet;
-                            client.balance[balanceType] = client.balance[balanceType] - bet;
-                            this.send(client, { balance: { type: balanceType, balance: newBalance } });
-                        }
+                                let newBalance = client.balance[balanceType] - bet;
+                                client.balance[balanceType] = client.balance[balanceType] - bet;
+                                this.send(client, { balance: { type: balanceType, balance: newBalance } });
+                            }
+                        })
                     })
                 }
             });
@@ -149,7 +151,25 @@ class Server extends colyseus.Room {
             this.send(client, { error: 'balance' });
         }
     }
-
+    getCandle(market, callBack) {
+        let url = canddleUrl;
+        let { type, symbol } = market;
+        let post = {
+            type,
+            symbol,
+            token: this.getToken(true)
+        }
+        for (let i in post) {
+            url = url.replace('{' + i + '}', post[i])
+        }
+        request(url, (error, response, body) => {
+            let data = JSON.parse(body);
+            if (!('s' in data)) {
+                return callBack(null);
+            }
+            return callBack({ point: data.t[0], price: data.c[0] });
+        });
+    }
 }
 
 
