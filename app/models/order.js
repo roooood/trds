@@ -15,7 +15,7 @@ module.exports = function (orm, db) {
   },
     {
       hooks: {
-        beforeValidation: function () {
+        beforeCreate: function () {
           this.time = new Date();
           this.status = 'pending';
         }

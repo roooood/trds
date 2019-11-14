@@ -14,7 +14,7 @@ module.exports = function (orm, db) {
   },
     {
       hooks: {
-        beforeValidation: function () {
+        beforeCreate: function () {
           this.joinedAt = new Date();
           this.lastSeen = new Date();
           this.status = true;

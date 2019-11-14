@@ -17,7 +17,7 @@ class Server extends colyseus.Room {
         this.tokens = {};
         this.setting = {};
         this.orders = [];
-        this.time = 0;
+        this.serverTime = 0;
         this.checker = null;
     }
     async onInit(options) {
@@ -31,14 +31,16 @@ class Server extends colyseus.Room {
         this.db = await promise;
         this.models = this.db.models;
 
-        this.refreshConfigData();
-        this.getAllOrders();
+        this.refreshConfigData(() => {
+            this.checkOrders();
+        });
 
-        this.clock.setTimeout(() => {
-            this.checker = this.clock.setInterval(this.checkOrders, 1000);
-        }, 2000);
+        // this.clock.setTimeout(() => {
+        //     this.getTime();
+        //     this.checker = this.clock.setInterval(this.checkOrders, 1000);
+        // }, 5000);
     }
-    refreshConfigData() {
+    refreshConfigData(cb) {
         let item;
 
         this.models.setting.find().all((err, setting) => {
@@ -54,6 +56,7 @@ class Server extends colyseus.Room {
                     this.tokens[item.token] = 0;
                 }
             }
+            cb();
         })
     }
     requestJoin(options, isNewRoom) {
@@ -134,12 +137,13 @@ class Server extends colyseus.Room {
                 }
                 else {
                     this.getCandle(market, (candle) => {
+                        let delay = tradeAt * 60;
                         let data = {
                             balanceType,
                             tradeType,
                             price: candle.price,
                             point: candle.point,
-                            tradeAt: candle.point + (tradeAt * 60),
+                            tradeAt: candle.point + delay,
                             bet,
                             profit: parseInt(this.setting.profit),
                             market_id: market.id,
@@ -156,6 +160,9 @@ class Server extends colyseus.Room {
                                 let newBalance = client.balance[balanceType] - bet;
                                 client.balance[balanceType] = client.balance[balanceType] - bet;
                                 this.send(client, { balance: { type: balanceType, balance: newBalance } });
+                                setTimeout(() => {
+                                    this.checkOrder(order);
+                                }, delay * 1000);
                             }
                         })
                     })
@@ -166,67 +173,102 @@ class Server extends colyseus.Room {
             this.send(client, { error: 'balance' });
         }
     }
+    checkcccOrders() {
+        let i;
+        for (i in this.orders) {
+            if (this.orders[i] != null) {
+                if (this.serverTime >= this.orders[i].tradeAt && this.orders[i].status == 'pending') {
+                    this.getCandleHistory(this.orders[i].market, { from: this.orders[i].point, to: this.orders[i].tradeAt }, (candles) => {
+                        if (candles != null) {
+                            let price = this.getOver(this.orders[i].price);
+                            let type = this.orders[i].tradeType == 'buy' ? 'h' : 'l';
+                            let len = candles.c.length, j, check, res, win = false;
+                            for (j = 0; j < len; j++) {
+                                check = (j == 0) ? candles.c[j] : candles[type][j];
+                                res = type == 'h' ? price < check : price > check;
+                                if (res) {
+                                    win = true;
+                                    break;
+                                }
+                            }
+                            this.setOrderResult(i, { type: win ? 'win' : 'lose' });
+                        }
+                    })
+                }
+            }
+        }
+        this.serverTime += 1;
+    }
     getOrders(client) {
         client.model.getOrder().order("-id").run((err, orders) => {
             this.send(client, { orders: orders });
         });
     }
-    getAllOrders() {
-        this.getTime();
-        this.models.order.find({ status: 'pending' }).all((err, orders) => {
-            if (err) return next(err);
-            this.orders = orders;
+    checkOrders() {
+        this.getTime((time) => {
+            this.models.order.find({ status: 'pending' }).all((err, orders) => {
+                if (err) return next(err);
+                let order, delay;
+                for (order of orders) {
+                    if (order.tradeAt < time) {
+                        this.checkOrder(order);
+                    }
+                    else {
+                        delay = order.tradeAt - time;
+                        ((order, delay) => {
+                            setTimeout(() => {
+                                this.checkOrder(order);
+                            }, delay * 1000);
+                        })(order, delay);
+                    }
+                }
+            });
         });
     }
-    getTime() {
-        getCandle({ type: 'crypto', symbol: 'BINANCE:BTCUSDC' }, (market) => {
-            this.time = market.point;
+    checkOrder(order) {
+        this.getCandleHistory(order.market, { from: order.point, to: order.tradeAt }, (candles) => {
+            if (candles != null) {
+                let price = this.getOver(order.price);
+                let type = order.tradeType == 'buy' ? 'h' : 'l';
+                let len = candles.c.length, j, check, res, win = false;
+                for (j = 0; j < len; j++) {
+                    check = (j == 0) ? candles.c[j] : candles[type][j];
+                    res = type == 'h' ? price < check : price > check;
+                    if (res) {
+                        win = true;
+                        break;
+                    }
+                }
+                this.setOrderResult(order, { type: win ? 'win' : 'lose' });
+            }
+        })
+    }
+    setOrderResult(order, { type }) {
+        order.status = 'done';
+        order.amount = type == 'win' ? (order.bet * order.profit) / 100 : 0;
+        order.save((err, xorder) => {
+            if (err)
+                console.log("error update order !", err);
+            else {
+                let user = this.userById(order.user_id);
+                if (user !== false) {
+                    this.send(this.clients[user], { orderResult: order });
+                }
+            }
+        });
+    }
+    getTime(callback) {
+        this.getCandle({ type: 'crypto', symbol: 'BINANCE:BTCUSDT' }, (market) => {
+            if (market != null)
+                callback(market.point);
         })
     }
     getOver(price) {
         let over = (parseInt(this.setting.tradePercent) * price) / 100;
         return price + over;
     }
-    checkOrders() {
-        let i;
-        for (i in this.orders) {
-            if (this.orders[i] != null) {
-                if (this.time >= this.orders[i].tradeAt) {
-                    this.getCandleHistory(this.orders[i].market, { from: this.orders[i].point, to: this.orders[i].tradeAt }, (candles) => {
-                        let price = this.getOver(this.orders[i].price);
-                        let type = this.orders[i].tradeType == 'buy' ? 'h' : 'l';
-                        let len = candles.c.length, j, check, res, win = false;
-                        for (j = 0; j < len; j++) {
-                            check = (j == 0) ? data.c[j] : data[type][j];
-                            res = type == 'h' ? price < check : price > check;
-                            if (res) {
-                                win = true;
-                                break;
-                            }
-                        }
-                        this.setOrderResult(i, { type: win ? 'win' : 'lose' });
-                    })
-                }
-            }
-        }
-        this.time++;
-        console.log(this.time)
-    }
-    setOrderResult(index, { type }) {
-        this.orders[index].status = 'done';
-        this.orders[index].amount = type == win ? this.orders[index].bet * this.orders[index].profit : 0;
-        this.orders[index].save(function (err) {
-            if (err)
-                console.log("error update order !", this.orders[index]);
-            else {
-                let user = this.userById(this.orders[index].user_id);
-                if (user !== false) {
-                    this.send(this.clients[user], { orderResult: this.orders[index] });
-                    this.orders[index] = null;
-                }
-            }
-        });
-    }
+
+
     getCandle(market, callBack) {
         let url = canddleUrl;
         let { type, symbol } = market;
@@ -239,7 +281,7 @@ class Server extends colyseus.Room {
             url = url.replace('{' + i + '}', post[i])
         }
         request(url, (error, response, body) => {
-            let data = JSON.parse(body);
+            let data = this.parseJson(body);
             if (!('s' in data) || data.s != 'ok') {
                 return callBack(null);
             }
@@ -260,12 +302,20 @@ class Server extends colyseus.Room {
             url = url.replace('{' + i + '}', post[i])
         }
         request(url, (error, response, body) => {
-            let data = JSON.parse(body);
+            let data = this.parseJson(body);
             if (!('s' in data) || data.s != 'ok') {
                 return callBack(null);
             }
             return callBack(data);
         });
+    }
+    parseJson(body) {
+        try {
+            return JSON.parse(body)
+        } catch (error) {
+            console.log(error);
+            return {};
+        }
     }
     userById(id) {
         let i;
