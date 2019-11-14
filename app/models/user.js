@@ -2,6 +2,7 @@
 module.exports = function (orm, db) {
   var User = db.define('user', {
     id: { type: 'serial', key: true },
+    id: { type: 'serial', key: true },
     username: { type: 'text', required: true, unique: true },
     password: { type: 'text', required: true },
     email: { type: 'text', required: true, unique: true },

@@ -18,6 +18,10 @@ module.exports = function (app) {
       res.send({ success: false, message: "loginNeed" })
   };
   app.get('/', controllers.home);
+  app.post('/manage/list', controllers.manage.list);
+  app.post('/manage/delete', controllers.manage.delete);
+  app.post('/manage/update', controllers.manage.update);
+  app.post('/manage/add', controllers.manage.add);
   app.post('/user/add_account', controllers.user.add);
   app.post('/user/login', controllers.user.login);
   app.post('/user/username_check', controllers.user.usernameCheck);
