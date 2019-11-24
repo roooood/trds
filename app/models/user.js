@@ -8,8 +8,8 @@ module.exports = function (orm, db) {
     email: { type: 'text', required: true, unique: true },
     realBalance: Number,
     practiceBalance: Number,
-    joinedAt: { type: 'date', required: true, time: true },
-    lastSeen: { type: 'date', required: true, time: true },
+    joinedAt: { type: 'date', time: true },
+    lastSeen: { type: 'date', time: true },
     status: Boolean,
     token: String
   },
@@ -45,6 +45,13 @@ module.exports = function (orm, db) {
               practice: this.practiceBalance,
             },
             token: this.token,
+          };
+        }
+        ,
+        toString: function () {
+          return {
+            id: this.id,
+            username: this.username,
           };
         }
       }

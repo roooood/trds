@@ -1,5 +1,5 @@
 var colyseus = require('colyseus');
-var models = require('../app/models/');
+var models = require('../app/models');
 var request = require('request');
 var canddleUrl = 'https://finnhub.io/api/v1/{type}/candle?symbol={symbol}&resolution=1&count=1&token={token}';
 var canddleUrlFrom = 'https://finnhub.io/api/v1/{type}/candle?symbol={symbol}&resolution=1&from={from}&to={to}&token={token}';
@@ -14,63 +14,107 @@ class Server extends colyseus.Room {
         this.db = null;
         this.models = null;
         this.users = {};
-        this.tokens = {};
+        this.tokens = null;
         this.setting = {};
         this.orders = [];
         this.serverTime = 0;
         this.checker = null;
+        this.online = 0;
+        this.orders = [];
+        this.defaultMarket = null;
     }
     async onInit(options) {
         this.setState(new State);
-        let promise = new Promise((resolve, reject) => {
-            models(function (err, ldb) {
-                resolve(ldb);
+        // let promise = new Promise((resolve, reject) => {
+        //     models(function (err, ldb) {
+        //         resolve(ldb);
+        //     });
+        // });
+
+        // this.db = await promise;
+        // this.models = this.db.models;
+
+        await this.getDbModel();
+        await this.getSeeting();
+        // this.checkOrders();
+    }
+    getDbModel() {
+        new Promise((resolve, reject) => {
+            models((err, ldb) => {
+                this.db = ldb;
+                this.models = this.db.models;
+                console.log('getDbModel')
+                resolve(true);
             });
         });
-
-        this.db = await promise;
-        this.models = this.db.models;
-
-        this.refreshConfigData(() => {
-            this.checkOrders();
-        });
-
-        // this.clock.setTimeout(() => {
-        //     this.getTime();
-        //     this.checker = this.clock.setInterval(this.checkOrders, 1000);
-        // }, 5000);
     }
-    refreshConfigData(cb) {
-        let item;
-
-        this.models.setting.find().all((err, setting) => {
-            if (err) return next(err);
-            for (item of setting) {
-                this.setting[item.key] = item.value;
-            }
-        })
-        this.models.tokens.find().all((err, tokens) => {
-            if (err) return next(err);
-            for (item of tokens) {
-                if (!(item.token in this.tokens)) {
-                    this.tokens[item.token] = 0;
+    getSeeting() {
+        return new Promise((resolve, reject) => {
+            let item;
+            this.models.setting.find().all((err, setting) => {
+                if (err) return next(err);
+                for (item of setting) {
+                    this.setting[item.key] = item.value;
                 }
-            }
-            cb();
-        })
+                console.log('getSeeting')
+                resolve(true)
+            })
+        });
+    }
+    getTokens() {
+        this.tokens = {};
+        return new Promise((resolve, reject) => {
+            let item;
+            this.models.tokens.find().all((err, tokens) => {
+                if (err) return next(err);
+                for (item of tokens) {
+                    if (!(item.token in this.tokens)) {
+                        this.tokens[item.token] = 0;
+                    }
+                }
+                console.log('getToken');
+                resolve(true)
+            })
+        });
+    }
+    getDefaultMarket(check) {
+        if (check && this.defaultMarket != null) {
+            return this.defaultMarket;
+        }
+        return new Promise((resolve, reject) => {
+            this.models.market.get(this.setting.defaultMarket, (err, market) => {
+                if (err) {
+                }
+                else {
+                    this.defaultMarket = market.serialize();
+                }
+                console.log('getDefaultMarket');
+                resolve(this.defaultMarket)
+            });
+        });
     }
     requestJoin(options, isNewRoom) {
         return true;
     }
     async onAuth(options) {
-        let promise = new Promise((resolve, reject) => {
+        if (options.key == 'admin') {
+            return true;
+        }
+        return new Promise((resolve, reject) => {
             this.models.user.find({ token: options.key }, 1, (err, user) => {
                 resolve(user[0])
             });
         });
-        return await promise;
     }
-    onJoin(client, options, auth) {
+    async onJoin(client, options, auth) {
+        console.log('join');
+        if (auth === true) {
+            client.admin = true;
+            this.send(client, { welcome: true });
+            this.getAdminData();
+            return;
+        }
+        this.online++;
         client.model = auth;
         let user = {
             id: auth.id,
@@ -80,7 +124,8 @@ class Server extends colyseus.Room {
                 practice: auth.practiceBalance,
             }
         }
-        let token = this.getToken();
+        let token = await this.getToken();
+        let market = await this.getDefaultMarket(true);
 
         client.id = auth.id;
         client.balance = user.balance;
@@ -90,12 +135,17 @@ class Server extends colyseus.Room {
             welcome: {
                 user,
                 token,
-                setting: this.setting
+                setting: this.setting,
+                market: market,
             }
         });
         this.users['u' + auth.id] = user;
+        this.getAdminData();
     }
-    getToken(temp = false) {
+    async getToken(temp = false) {
+        if (this.tokens == null) {
+            await this.getTokens();
+        }
         let i, j;
         for (j = 0; j < 10; j++) {
             for (i in this.tokens) {
@@ -114,6 +164,9 @@ class Server extends colyseus.Room {
                 case 'trade':
                     this.trade(client, value);
                     break;
+                case 'message':
+                    this.message(client, value);
+                    break;
                 case 'get':
                     this['get' + value](client);
                     break;
@@ -122,10 +175,54 @@ class Server extends colyseus.Room {
     }
 
     onLeave(client, consented) {
+        if (!'admin' in client)
+            this.online--;
         this.tokens[client.token] = this.tokens[client.token] - 1;
+        this.getAdminData();
     }
     onDispose() {
 
+    }
+    getAdminData() {
+        this.sendToAdmin({
+            online: this.online,
+            users: this.users,
+        })
+    }
+    sendToAdmin(data) {
+        let i;
+        for (i in this.clients) {
+            if ('admin' in this.clients[i]) {
+                this.send(this.clients[i], data);
+            }
+        }
+    }
+    message(client, message) {
+        let user_id, text, status;
+        if ('admin' in client) {
+            user_id = message[0];
+            text = message[1];
+            status = 'to';
+        }
+        else {
+            user_id = client.id;
+            text = message;
+            status = 'from';
+        }
+
+        this.models.chat.create({ text, status, user_id }, (err, message) => {
+            if (err) {
+                console.log(err)
+            }
+            else {
+                this.models.chat.get(message.id, (err, msg) => {
+                    let user = this.userById(user_id)
+                    if (user)
+                        this.send(this.clients[user], { message: [msg] });
+                    this.sendToAdmin({ message: [msg] })
+                });
+            }
+        })
     }
 
     trade(client, { balanceType, tradeType, bet, marketId, tradeAt }) {
@@ -173,36 +270,41 @@ class Server extends colyseus.Room {
             this.send(client, { error: 'balance' });
         }
     }
-    checkcccOrders() {
-        let i;
-        for (i in this.orders) {
-            if (this.orders[i] != null) {
-                if (this.serverTime >= this.orders[i].tradeAt && this.orders[i].status == 'pending') {
-                    this.getCandleHistory(this.orders[i].market, { from: this.orders[i].point, to: this.orders[i].tradeAt }, (candles) => {
-                        if (candles != null) {
-                            let price = this.getOver(this.orders[i].price);
-                            let type = this.orders[i].tradeType == 'buy' ? 'h' : 'l';
-                            let len = candles.c.length, j, check, res, win = false;
-                            for (j = 0; j < len; j++) {
-                                check = (j == 0) ? candles.c[j] : candles[type][j];
-                                res = type == 'h' ? price < check : price > check;
-                                if (res) {
-                                    win = true;
-                                    break;
-                                }
-                            }
-                            this.setOrderResult(i, { type: win ? 'win' : 'lose' });
-                        }
-                    })
-                }
-            }
-        }
-        this.serverTime += 1;
-    }
     getOrders(client) {
         client.model.getOrder().order("-id").run((err, orders) => {
-            this.send(client, { orders: orders });
+            for (let order of orders)
+                order.user = order.user.toString();
+            this.send(client, { orders });
         });
+    }
+    getVideos(client) {
+        this.models.video.find().order("-id").all((err, videos) => {
+            this.send(client, { videos });
+        });
+    }
+    getLeads(client) {
+        this.models.order.find({ status: 'done' }).order("-amount").all((err, leads) => {
+            for (let lead of leads)
+                lead.user = lead.user.toString();
+            this.send(client, { leads });
+        });
+    }
+    getMessages(client) {
+        if (!('admin' in client)) {
+            client.model.getChat().run((err, messages) => {
+                for (let message of messages)
+                    message.user = message.user.toString();
+                this.send(client, { message: messages });
+            });
+        }
+        else {
+            this.models.chat.find().all((err, chats) => {
+                if (err) return next(err);
+                for (let chat of chats)
+                    chat.user = chat.user.toString();
+                this.send(client, { message: chats });
+            })
+        }
     }
     checkOrders() {
         this.getTime((time) => {
@@ -313,7 +415,7 @@ class Server extends colyseus.Room {
         try {
             return JSON.parse(body)
         } catch (error) {
-            console.log(error);
+            //console.log(error);
             return {};
         }
     }

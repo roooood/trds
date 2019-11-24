@@ -8,3 +8,4 @@ module.exports = function (orm, db) {
   Setting.sync();
 };
 //refreshtime , profit
+

@@ -2,7 +2,7 @@ var settings = require('./settings');
 var controllers = require('../app/controllers')
 var colyseus = require('colyseus');
 var http = require('http')
-var ServerIO = require('../server')
+var ServerIO = require('../server/trade')
 
 module.exports = function (app) {
 
@@ -22,6 +22,7 @@ module.exports = function (app) {
   app.post('/manage/delete', controllers.manage.delete);
   app.post('/manage/update', controllers.manage.update);
   app.post('/manage/add', controllers.manage.add);
+
   app.post('/user/add_account', controllers.user.add);
   app.post('/user/login', controllers.user.login);
   app.post('/user/username_check', controllers.user.usernameCheck);

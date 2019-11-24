@@ -30,7 +30,7 @@ module.exports = function (orm, db) {
         }
       }
     });
-  Order.hasOne('user', db.models.user, { required: true, autoFetch: false, reverse: 'order' });
+  Order.hasOne('user', db.models.user, { required: true, autoFetch: true, reverse: 'order' });
   Order.hasOne('market', db.models.market, { required: true, autoFetch: true, reverse: 'order' });
   Order.sync();
 };

@@ -9,6 +9,8 @@ function setup(db, cb) {
   require('./tokens')(orm, db);
   require('./order')(orm, db);
   require('./setting')(orm, db);
+  require('./chat')(orm, db);
+  require('./video')(orm, db);
   // db.sync();
   return cb(null, db);
 }
