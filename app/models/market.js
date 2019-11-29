@@ -2,7 +2,7 @@
 module.exports = function (orm, db) {
   var Market = db.define('market', {
     id: { type: 'serial', key: true },
-    type: ["stocks", "forex", "crypto"],
+    type: ["stock", "forex", "crypto"],
     symbol: String,
     display: String,
     description: String,

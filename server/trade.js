@@ -25,25 +25,19 @@ class Server extends colyseus.Room {
     }
     async onInit(options) {
         this.setState(new State);
-        // let promise = new Promise((resolve, reject) => {
-        //     models(function (err, ldb) {
-        //         resolve(ldb);
-        //     });
-        // });
-
-        // this.db = await promise;
-        // this.models = this.db.models;
 
         await this.getDbModel();
         await this.getSeeting();
-        // this.checkOrders();
+        setTimeout(() => {
+            this.checkOrders();
+        }, 3000);
+
     }
     getDbModel() {
         new Promise((resolve, reject) => {
             models((err, ldb) => {
                 this.db = ldb;
                 this.models = this.db.models;
-                console.log('getDbModel')
                 resolve(true);
             });
         });
@@ -56,7 +50,6 @@ class Server extends colyseus.Room {
                 for (item of setting) {
                     this.setting[item.key] = item.value;
                 }
-                console.log('getSeeting')
                 resolve(true)
             })
         });
@@ -72,7 +65,6 @@ class Server extends colyseus.Room {
                         this.tokens[item.token] = 0;
                     }
                 }
-                console.log('getToken');
                 resolve(true)
             })
         });
@@ -88,7 +80,6 @@ class Server extends colyseus.Room {
                 else {
                     this.defaultMarket = market.serialize();
                 }
-                console.log('getDefaultMarket');
                 resolve(this.defaultMarket)
             });
         });
@@ -107,7 +98,6 @@ class Server extends colyseus.Room {
         });
     }
     async onJoin(client, options, auth) {
-        console.log('join');
         if (auth === true) {
             client.admin = true;
             this.send(client, { welcome: true });
@@ -142,6 +132,30 @@ class Server extends colyseus.Room {
         this.users['u' + auth.id] = user;
         this.getAdminData();
     }
+    async refresh(client) {
+        if ('admin' in client) {
+            await this.getSeeting();
+            this.broadcast({ setting: this.setting })
+        }
+    }
+    userUpdate(client, userId) {
+        if ('admin' in client) {
+            let clnt = this.userById(userId);
+            if (clnt !== false) {
+                this.models.user.get(userId, (err, user) => {
+                    let userInfo = {
+                        id: user.id,
+                        username: user.username,
+                        balance: {
+                            real: user.realBalance,
+                            practice: user.practiceBalance,
+                        }
+                    }
+                    this.send(this.clients[clnt], { user: userInfo });
+                });
+            }
+        }
+    }
     async getToken(temp = false) {
         if (this.tokens == null) {
             await this.getTokens();
@@ -163,6 +177,15 @@ class Server extends colyseus.Room {
             switch (type) {
                 case 'trade':
                     this.trade(client, value);
+                    break;
+                case 'refresh':
+                    this.refresh(client);
+                    break;
+                case 'user':
+                    this.userUpdate(client, value);
+                    break;
+                case 'myOrder':
+                    this.myOrder(client, value);
                     break;
                 case 'message':
                     this.message(client, value);
@@ -251,6 +274,13 @@ class Server extends colyseus.Room {
                                 this.send(client, { error: 'order' });
                             }
                             else {
+                                if (balanceType == 'real') {
+                                    client.model.realBalance -= bet;
+                                }
+                                else {
+                                    client.model.practiceBalance -= bet;
+                                }
+                                client.model.save();
                                 order.market = market;
                                 this.send(client, { order: [order] });
                                 this.orders.push(order);
@@ -269,6 +299,11 @@ class Server extends colyseus.Room {
         else {
             this.send(client, { error: 'balance' });
         }
+    }
+    myOrder(client, market_id) {
+        this.models.order.find().find({ user_id: client.id, market_id, status: 'pending' }).all((err, orders) => {
+            this.send(client, { opens: orders });
+        });
     }
     getOrders(client) {
         client.model.getOrder().order("-id").run((err, orders) => {
@@ -352,12 +387,37 @@ class Server extends colyseus.Room {
             if (err)
                 console.log("error update order !", err);
             else {
-                let user = this.userById(order.user_id);
-                if (user !== false) {
-                    this.send(this.clients[user], { orderResult: order });
+                let clnt = this.userById(order.user_id);
+                if (clnt !== false) {
+                    this.send(this.clients[clnt], { orderResult: order });
                 }
             }
         });
+        if (type == 'win') {
+            let newBalance = order.amount + order.bet;
+            let balance = 0;
+            let clnt = this.userById(order.user_id);
+            this.models.user.get(order.user_id, (err, user) => {
+                if (order.balanceType == 'real') {
+                    user.realBalance += newBalance;
+                    if (clnt !== false) {
+                        this.clients[clnt].realBalance += newBalance;
+                        balance = this.clients[clnt].realBalance;
+                    }
+                }
+                else {
+                    user.practiceBalance += newBalance;
+                    if (clnt !== false) {
+                        this.clients[clnt].practiceBalance += newBalance;
+                        balance = this.clients[clnt].practiceBalance;
+                    }
+                }
+                if (clnt !== false) {
+                    this.send(this.clients[clnt], { balance: { type: order.balanceType, balance } });
+                }
+                user.save();
+            });
+        }
     }
     getTime(callback) {
         this.getCandle({ type: 'crypto', symbol: 'BINANCE:BTCUSDT' }, (market) => {
@@ -371,13 +431,14 @@ class Server extends colyseus.Room {
     }
 
 
-    getCandle(market, callBack) {
+    async getCandle(market, callBack) {
         let url = canddleUrl;
+        let token = await this.getToken(true);
         let { type, symbol } = market;
         let post = {
             type,
             symbol,
-            token: this.getToken(true)
+            token
         }
         for (let i in post) {
             url = url.replace('{' + i + '}', post[i])
@@ -390,7 +451,8 @@ class Server extends colyseus.Room {
             return callBack({ point: data.t[0], price: data.c[0] });
         });
     }
-    getCandleHistory(market, time, callBack) {
+    async getCandleHistory(market, time, callBack) {
+        let token = await this.getToken(true);
         let url = canddleUrl;
         let { type, symbol } = market;
         let post = {
@@ -398,7 +460,7 @@ class Server extends colyseus.Room {
             symbol,
             from: time.from,
             to: time.to,
-            token: this.getToken(true)
+            token
         }
         for (let i in post) {
             url = url.replace('{' + i + '}', post[i])
