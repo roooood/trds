@@ -22,16 +22,12 @@ class Server extends colyseus.Room {
         this.online = 0;
         this.orders = [];
         this.defaultMarket = null;
+        this.init = false;
     }
     async onInit(options) {
         this.setState(new State);
 
         await this.getDbModel();
-        await this.getSeeting();
-        setTimeout(() => {
-            this.checkOrders();
-        }, 3000);
-
     }
     getDbModel() {
         new Promise((resolve, reject) => {
@@ -88,9 +84,17 @@ class Server extends colyseus.Room {
         return true;
     }
     async onAuth(options) {
+        if (!this.init) {
+            await this.getSeeting();
+            setTimeout(() => {
+                this.checkOrders();
+            }, 3000);
+            this.init = true;
+        }
         if (options.key == 'admin') {
             return true;
         }
+
         return new Promise((resolve, reject) => {
             this.models.user.find({ token: options.key }, 1, (err, user) => {
                 resolve(user[0])
@@ -402,15 +406,15 @@ class Server extends colyseus.Room {
                     user.realBalance += newBalance;
                     if (clnt !== false) {
                         this.clients[clnt].realBalance += newBalance;
-                        balance = this.clients[clnt].realBalance;
                     }
+                    balance = user.realBalance;
                 }
                 else {
                     user.practiceBalance += newBalance;
                     if (clnt !== false) {
                         this.clients[clnt].practiceBalance += newBalance;
-                        balance = this.clients[clnt].practiceBalance;
                     }
+                    balance = user.practiceBalance;
                 }
                 if (clnt !== false) {
                     this.send(this.clients[clnt], { balance: { type: order.balanceType, balance } });

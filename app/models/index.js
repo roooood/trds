@@ -5,6 +5,8 @@ var connection = null;
 
 function setup(db, cb) {
   require('./user')(orm, db);
+  require('./deposit')(orm, db);
+  require('./withdraw')(orm, db);
   require('./market')(orm, db);
   require('./tokens')(orm, db);
   require('./order')(orm, db);

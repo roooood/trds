@@ -5,7 +5,6 @@ var http = require('http')
 var ServerIO = require('../server/trade')
 
 module.exports = function (app) {
-
   var server = http.createServer(app)
   var gameServer = new colyseus.Server({ server: server })
   gameServer.register('trade', ServerIO)
@@ -34,6 +33,9 @@ module.exports = function (app) {
   app.get('/market/new/:type', controllers.market.new);
   app.get('/market/list/:type', controllers.market.list);
 
-  app.post('/candle', controllers.candle.history);
+  app.post('/candle', checkLogin, controllers.candle.history);
+
+  app.post('/cash/:type', checkLogin, controllers.cash);
+
 
 };
