@@ -8,6 +8,55 @@ Client.init(settings.coinbaseApiKey);
 
 module.exports = function (req, res, next) {
     let { type } = req.params;
+    if (type == 'hook') {
+        let data = {};
+        let payload = req.body.event;
+        let BaseType = payload.type;
+        data.payId = payload.id;
+
+        if (BaseType == 'charge:pending') {
+            data.status = 'pending';
+            data.type = payload.payments[0].network
+            data.amount = payload.payments[0].value.crypto.amount;
+            data.price = payload.payments[0].value.local.amount;
+            data.payCode = payload.code;
+            data.time = payload.created_at;
+            data.user_id = payload.metadata.user_id;
+
+            req.models.deposit.create(data, function (err, user) {
+                if (err) {
+                    return res.send({ error: true });
+                }
+                else {
+                    return res.send({ success: true });
+                }
+            });
+        }
+        else if (BaseType == 'charge:failed') {
+            req.models.deposit.find({ payId: data.payId }).all((err, diposits) => {
+                if (err) {
+
+                } else if (diposits.length > 0) {
+                    diposits[0].status = 'canceled';
+                    diposits[0].save();
+                }
+
+            });
+        }
+        else if (BaseType == 'charge:confirmed') {
+            req.models.deposit.find({ payId: data.payId }).all((err, diposits) => {
+                if (err) {
+
+                } else if (diposits.length > 0) {
+                    diposits[0].status = 'done';
+                    diposits[0].save();
+                }
+
+            });
+
+        }
+
+    }
     if (type == 'deposit') {
         var firstChargeObj = new Charge({
             "description": "from trade app",
@@ -57,7 +106,7 @@ module.exports = function (req, res, next) {
         });
     }
     else if (type == 'depositHistory') {
-        req.models.deposit.find({ user_id: req.user.id }).all((err, diposits) => {
+        req.models.deposit.find({ user_id: req.user.id }).order('-id').all((err, diposits) => {
             if (err) {
                 return res.send({ error: true });
             } else {
@@ -67,7 +116,7 @@ module.exports = function (req, res, next) {
         });
     }
     else if (type == 'withdrawHistory') {
-        req.models.withdraw.find({ user_id: req.user.id }).all((err, withdraws) => {
+        req.models.withdraw.find({ user_id: req.user.id }).order('-id').all((err, withdraws) => {
             if (err) {
                 return res.send({ error: true });
             } else {

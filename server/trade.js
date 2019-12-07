@@ -288,8 +288,8 @@ class Server extends colyseus.Room {
                                 order.market = market;
                                 this.send(client, { order: [order] });
                                 this.orders.push(order);
-                                let newBalance = client.balance[balanceType] - bet;
-                                client.balance[balanceType] = client.balance[balanceType] - bet;
+                                let newBalance = (client.balance[balanceType] - bet).toFixed(2);
+                                client.balance[balanceType] = newBalance;
                                 this.send(client, { balance: { type: balanceType, balance: newBalance } });
                                 setTimeout(() => {
                                     this.checkOrder(order);
@@ -414,7 +414,7 @@ class Server extends colyseus.Room {
                     if (clnt !== false) {
                         this.clients[clnt].practiceBalance += newBalance;
                     }
-                    balance = user.practiceBalance;
+                    balance = user.practiceBalance.toFixed(2);
                 }
                 if (clnt !== false) {
                     this.send(this.clients[clnt], { balance: { type: order.balanceType, balance } });
