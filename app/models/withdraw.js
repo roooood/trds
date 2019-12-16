@@ -2,12 +2,13 @@
 module.exports = function (orm, db) {
   var Withdraw = db.define('withdraw', {
     id: { type: 'serial', key: true },
-    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "usdc"],
+    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "other"],
     address: { type: 'text' },
     amount: Number,
     price: Number,
     status: ["auditing", "pending", "cenceled", "done"],
     time: { type: 'date', time: true },
+    extra: { type: 'text' },
   },
     {
       hooks: {

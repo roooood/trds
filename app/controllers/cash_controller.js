@@ -1,10 +1,10 @@
 var _ = require('lodash');
-var settings = require('../../config/settings');
-var coinbase = require('coinbase-commerce-node');
-var Client = coinbase.Client;
-var Charge = coinbase.resources.Charge;
+//var settings = require('../../config/settings');
+//var coinbase = require('coinbase-commerce-node');
+//var Client = coinbase.Client;
+//var Charge = coinbase.resources.Charge;
 
-Client.init(settings.coinbaseApiKey);
+//Client.init(settings.coinbaseApiKey);
 
 module.exports = function (req, res, next) {
     let { type } = req.params;
@@ -58,27 +58,33 @@ module.exports = function (req, res, next) {
 
     }
     if (type == 'deposit') {
-        var firstChargeObj = new Charge({
-            "description": "from trade app",
-            "metadata": {
-                "user_id": req.user.id,
-            },
-            "name": "deposit to trade",
-            "pricing_type": "no_price"
-        });
-        firstChargeObj.save(function (error, response) {
-            if (error == null) {
-                return res.send(response)
+        req.models.payment.find().all((err, data) => {
+            if (err) {
+                return res.send({ error: true });
             }
-            return res.send({ error: true });
-            // if (response && response.id) {
-            // Charge.retrieve(response.id, function (error, response) {
-            //     console.log('Retrived charge(callback)');
-            //     console.log(response);
-            //     console.log(error);
-            // });
-            // }
+            return res.send({ success: true, data });
         });
+        // var firstChargeObj = new Charge({
+        //     "description": "from trade app",
+        //     "metadata": {
+        //         "user_id": req.user.id,
+        //     },
+        //     "name": "deposit to trade",
+        //     "pricing_type": "no_price"
+        // });
+        // firstChargeObj.save(function (error, response) {
+        //     if (error == null) {
+        //         return res.send(response)
+        //     }
+        //     return res.send({ error: true });
+        //     // if (response && response.id) {
+        //     // Charge.retrieve(response.id, function (error, response) {
+        //     //     console.log('Retrived charge(callback)');
+        //     //     console.log(response);
+        //     //     console.log(error);
+        //     // });
+        //     // }
+        // });
     }
     if (type == 'withdraw') {
         let params = _.pick(req.body, 'type', 'address', 'price');

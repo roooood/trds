@@ -1,7 +1,7 @@
 var _ = require('lodash');
 var request = require('request');
 var cryptoUrl = 'https://finnhub.io/api/v1/crypto/symbol?exchange=binance&token=bmlk6r7rh5rb2pv98jqg';
-var forexUrl = 'https://finnhub.io/api/v1/forex/symbol?exchange=fxpig&token=bmlk6r7rh5rb2pv98jqg';
+var forexUrl = 'https://finnhub.io/api/v1/forex/symbol?exchange=oanda&token=bmlk6r7rh5rb2pv98jqg';
 var stockUrl = 'https://www.nasdaq.com/api/v1/screener?page=2&pageSize=20';
 module.exports = {
     new: function (req, res, next) {

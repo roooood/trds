@@ -202,10 +202,11 @@ class Server extends colyseus.Room {
     }
 
     onLeave(client, consented) {
-        if (!'admin' in client)
+        if (!'admin' in client) {
             this.online--;
-        this.tokens[client.token] = this.tokens[client.token] - 1;
-        this.getAdminData();
+            this.tokens[client.token] = this.tokens[client.token] - 1;
+            this.getAdminData();
+        }
     }
     onDispose() {
 
@@ -261,11 +262,16 @@ class Server extends colyseus.Room {
                 }
                 else {
                     this.getCandle(market, (candle) => {
+                        if (candle == null) {
+                            this.send(client, { error: 'unhandled' });
+                            return;
+                        }
                         let delay = tradeAt * 60;
+                        let price = this.getOver(candle.price, tradeType);
                         let data = {
                             balanceType,
                             tradeType,
-                            price: candle.price,
+                            price: price,
                             point: candle.point,
                             tradeAt: candle.point + delay,
                             bet,
@@ -305,7 +311,7 @@ class Server extends colyseus.Room {
         }
     }
     myOrder(client, market_id) {
-        this.models.order.find().find({ user_id: client.id, market_id, status: 'pending' }).all((err, orders) => {
+        this.models.order.find({ user_id: client.id, market_id, status: 'pending' }).all((err, orders) => {
             this.send(client, { opens: orders });
         });
     }
@@ -346,30 +352,31 @@ class Server extends colyseus.Room {
         }
     }
     checkOrders() {
-        this.getTime((time) => {
-            this.models.order.find({ status: 'pending' }).all((err, orders) => {
-                if (err) return next(err);
-                let order, delay;
-                for (order of orders) {
-                    if (order.tradeAt < time) {
-                        this.checkOrder(order);
-                    }
-                    else {
-                        delay = order.tradeAt - time;
-                        ((order, delay) => {
-                            setTimeout(() => {
-                                this.checkOrder(order);
-                            }, delay * 1000);
-                        })(order, delay);
-                    }
+        let time = Math.round((new Date()).getTime() / 1000);
+        // this.getTime((time) => {
+        this.models.order.find({ status: 'pending' }).all((err, orders) => {
+            if (err) return next(err);
+            let order, delay;
+            for (order of orders) {
+                if (order.tradeAt < time) {
+                    this.checkOrder(order);
                 }
-            });
+                else {
+                    delay = order.tradeAt - time;
+                    ((order, delay) => {
+                        setTimeout(() => {
+                            this.checkOrder(order);
+                        }, delay * 1000);
+                    })(order, delay);
+                }
+            }
         });
+        // });
     }
     checkOrder(order) {
         this.getCandleHistory(order.market, { from: order.point, to: order.tradeAt }, (candles) => {
             if (candles != null) {
-                let price = this.getOver(order.price);
+                let price = order.price;
                 let type = order.tradeType == 'buy' ? 'h' : 'l';
                 let len = candles.c.length, j, check, res, win = false;
                 for (j = 0; j < len; j++) {
@@ -407,7 +414,7 @@ class Server extends colyseus.Room {
                     if (clnt !== false) {
                         this.clients[clnt].realBalance += newBalance;
                     }
-                    balance = user.realBalance;
+                    balance = user.realBalance.toFixed(2);
                 }
                 else {
                     user.practiceBalance += newBalance;
@@ -429,9 +436,9 @@ class Server extends colyseus.Room {
                 callback(market.point);
         })
     }
-    getOver(price) {
+    getOver(price, type) {
         let over = (parseInt(this.setting.tradePercent) * price) / 100;
-        return price + over;
+        return type == 'buy' ? price + over : price - over;
     }
 
 
@@ -448,16 +455,24 @@ class Server extends colyseus.Room {
             url = url.replace('{' + i + '}', post[i])
         }
         request(url, (error, response, body) => {
-            let data = this.parseJson(body);
-            if (!('s' in data) || data.s != 'ok') {
-                return callBack(null);
+            try {
+                let data = this.parseJson(body);
+                if (data == 'null') {
+                    callBack(null);
+                }
+                if (data.s == 'no_data' || !('s' in data) || data.s != 'ok') {
+                    callBack(null);
+                }
+                callBack({ point: data.t[0], price: data.c[0] });
+            } catch (error) {
+                callBack(null);
             }
-            return callBack({ point: data.t[0], price: data.c[0] });
+
         });
     }
     async getCandleHistory(market, time, callBack) {
         let token = await this.getToken(true);
-        let url = canddleUrl;
+        let url = canddleUrlFrom;
         let { type, symbol } = market;
         let post = {
             type,
@@ -471,18 +486,22 @@ class Server extends colyseus.Room {
         }
         request(url, (error, response, body) => {
             let data = this.parseJson(body);
-            if (!('s' in data) || data.s != 'ok') {
-                return callBack(null);
+            if (data == 'null') {
+                callBack(null);
+            }
+            if (data.s == 'no_data' || !('s' in data) || data.s != 'ok') {
+                callBack(null);
             }
             return callBack(data);
         });
     }
     parseJson(body) {
         try {
-            return JSON.parse(body)
+            return JSON.parse(body);
+
         } catch (error) {
             //console.log(error);
-            return {};
+            return null;
         }
     }
     userById(id) {

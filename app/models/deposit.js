@@ -2,13 +2,14 @@
 module.exports = function (orm, db) {
   var Deposit = db.define('deposit', {
     id: { type: 'serial', key: true },
-    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "usdc"],
+    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "other"],
     amount: Number,
     price: Number,
     status: ["pending", "cenceled", "done"],
     payCode: { type: 'text' },
     payId: { type: 'text' },
     time: { type: 'date', time: true },
+    extra: { type: 'text' },
   },
     {
       methods: {

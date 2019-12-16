@@ -4,6 +4,7 @@ var colyseus = require('colyseus');
 var http = require('http')
 var ServerIO = require('../server/trade')
 
+
 module.exports = function (app) {
   var server = http.createServer(app)
   var gameServer = new colyseus.Server({ server: server })
@@ -21,6 +22,7 @@ module.exports = function (app) {
   app.post('/manage/delete', controllers.manage.delete);
   app.post('/manage/update', controllers.manage.update);
   app.post('/manage/add', controllers.manage.add);
+  app.post('/manage/login', controllers.manage.login);
 
   app.post('/user/add_account', controllers.user.add);
   app.post('/user/login', controllers.user.login);
