@@ -24,6 +24,6 @@ module.exports = function (orm, db) {
         }
       }
     });
-  Chat.hasOne('user', db.models.user, { required: true, autoFetch: true, reverse: 'Chat' });
+  Chat.hasOne('user', db.models.user, { required: true, autoFetch: true, reverse: 'chat' });
   Chat.sync();
 };

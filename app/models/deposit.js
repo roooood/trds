@@ -2,29 +2,24 @@
 module.exports = function (orm, db) {
   var Deposit = db.define('deposit', {
     id: { type: 'serial', key: true },
-    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "other"],
     amount: Number,
     price: Number,
     status: ["pending", "cenceled", "done"],
-    payCode: { type: 'text' },
-    payId: { type: 'text' },
+    meta: { type: 'text' },
+    description: { type: 'text' },
     time: { type: 'date', time: true },
-    extra: { type: 'text' },
   },
     {
       methods: {
         serialize: function () {
           return {
             id: this.id,
-            type: this.type,
-            amount: this.amount,
-            price: this.price,
-            status: this.status,
-            time: this.time,
           };
         }
       }
     });
   Deposit.hasOne('user', db.models.user, { required: true, autoFetch: true, reverse: 'deposit' });
+  Deposit.hasOne('payment', db.models.payment, { required: true, autoFetch: true, reverse: 'deposit' });
+
   Deposit.sync();
 };

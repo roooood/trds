@@ -266,14 +266,15 @@ class Server extends colyseus.Room {
                             this.send(client, { error: 'unhandled' });
                             return;
                         }
+                        let sTime = Math.round((new Date()).getTime() / 1000)
                         let delay = tradeAt * 60;
                         let price = this.getOver(candle.price, tradeType);
                         let data = {
                             balanceType,
                             tradeType,
                             price: price,
-                            point: candle.point,
-                            tradeAt: candle.point + delay,
+                            point: sTime,
+                            tradeAt: sTime + delay,
                             bet,
                             profit: parseInt(this.setting.profit),
                             market_id: market.id,
@@ -328,10 +329,26 @@ class Server extends colyseus.Room {
         });
     }
     getLeads(client) {
-        this.models.order.find({ status: 'done' }).order("-amount").all((err, leads) => {
-            for (let lead of leads)
-                lead.user = lead.user.toString();
-            this.send(client, { leads });
+        this.models.order.aggregate(['user_id']).sum("amount").groupBy("user_id").order("-sum_amount").limit(3).get((err, tops) => {
+            let users = [];
+            for (let top of tops)
+                users.push(top.user_id);
+            this.models.user.find({ id: users }, (err, user) => {
+                let leaders = [];
+                for (let lead of user) {
+                    leaders[lead.id] = lead.toString();
+                }
+                let send = [];
+                for (let i of tops) {
+                    send.push(
+                        {
+                            user: leaders[i.user_id] || {},
+                            amount: i.sum_amount
+                        }
+                    )
+                }
+                this.send(client, { leads: send });
+            });
         });
     }
     getMessages(client) {
@@ -437,8 +454,18 @@ class Server extends colyseus.Room {
         })
     }
     getOver(price, type) {
-        let over = (parseInt(this.setting.tradePercent) * price) / 100;
-        return type == 'buy' ? price + over : price - over;
+        if (this.setting.tradePercent == 0) {
+            return price;
+        }
+        let over = (parseFloat(this.setting.tradePercent) * price) / 100;
+        let xprice = type == 'buy' ? price + over : price - over;
+        let p = (price + '').split('.');
+        if (p.length == 1) {
+            return xprice.toFixed(0);
+        }
+        else {
+            return xprice.toFixed(p[1].length);
+        }
     }
 
 

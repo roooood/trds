@@ -2,13 +2,13 @@
 module.exports = function (orm, db) {
   var Withdraw = db.define('withdraw', {
     id: { type: 'serial', key: true },
-    type: ["bitcoin", "ethereum", "bitcoincash", "litecoin", "other"],
     address: { type: 'text' },
     amount: Number,
     price: Number,
     status: ["auditing", "pending", "cenceled", "done"],
+    meta: { type: 'text' },
+    description: { type: 'text' },
     time: { type: 'date', time: true },
-    extra: { type: 'text' },
   },
     {
       hooks: {
@@ -27,5 +27,7 @@ module.exports = function (orm, db) {
       }
     });
   Withdraw.hasOne('user', db.models.user, { required: true, autoFetch: true, reverse: 'withdraw' });
+  Withdraw.hasOne('payment', db.models.payment, { required: true, autoFetch: true, reverse: 'withdraw' });
+
   Withdraw.sync();
 };
