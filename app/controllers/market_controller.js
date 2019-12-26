@@ -68,6 +68,9 @@ module.exports = {
         let { type } = req.params;
         req.models.market.find({ type }, function (err, markets) {
             let data = {};
+            for (let market of markets) {
+                delete market.order;
+            }
             data[type] = markets;
             return res.send(data)
         });

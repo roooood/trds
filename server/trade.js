@@ -252,9 +252,59 @@ class Server extends colyseus.Room {
             }
         })
     }
+    trade(client, { balanceType, tradeType, bet, marketId, tradeAt, price }) {
+        if (client.balance[balanceType] > bet) {
+            this.models.market.get(marketId, (err, market) => {
+                if (err) {
+                    this.send(client, { error: 'market' });
+                }
+                else {
+                    let sTime = Math.round((new Date()).getTime() / 1000)
+                    let delay = tradeAt * 60;
+                    let newPrice = this.getOver(price, tradeType);
+                    let data = {
+                        balanceType,
+                        tradeType,
+                        price: newPrice,
+                        point: sTime,
+                        tradeAt: sTime + delay,
+                        bet,
+                        profit: parseInt(this.setting.profit),
+                        market_id: market.id,
+                        user_id: client.id,
+                    }
+                    this.models.order.create(data, (err, order) => {
+                        if (err) {
+                            this.send(client, { error: 'order' });
+                        }
+                        else {
+                            if (balanceType == 'real') {
+                                client.model.realBalance -= bet;
+                            }
+                            else {
+                                client.model.practiceBalance -= bet;
+                            }
+                            client.model.save();
+                            order.market = market;
+                            this.send(client, { order: [order] });
+                            this.orders.push(order);
+                            let newBalance = (client.balance[balanceType] - bet).toFixed(2);
+                            client.balance[balanceType] = newBalance;
+                            this.send(client, { balance: { type: balanceType, balance: newBalance } });
+                            setTimeout(() => {
+                                this.checkOrder(order);
+                            }, delay * 1000);
+                        }
+                    })
 
-    trade(client, { balanceType, tradeType, bet, marketId, tradeAt }) {
-
+                }
+            });
+        }
+        else {
+            this.send(client, { error: 'balance' });
+        }
+    }
+    oldtrade(client, { balanceType, tradeType, bet, marketId, tradeAt }) {
         if (client.balance[balanceType] > bet) {
             this.models.market.get(marketId, (err, market) => {
                 if (err) {
@@ -313,6 +363,8 @@ class Server extends colyseus.Room {
     }
     myOrder(client, market_id) {
         this.models.order.find({ user_id: client.id, market_id, status: 'pending' }).all((err, orders) => {
+            for (let order of orders)
+                delete order.user;
             this.send(client, { opens: orders });
         });
     }
@@ -487,10 +539,11 @@ class Server extends colyseus.Room {
                 if (data == 'null') {
                     callBack(null);
                 }
-                if (data.s == 'no_data' || !('s' in data) || data.s != 'ok') {
+                else if (!('s' in data) || data.s == 'no_data' || data.s != 'ok') {
                     callBack(null);
                 }
-                callBack({ point: data.t[0], price: data.c[0] });
+                else
+                    callBack({ point: data.t[0], price: data.c[0] });
             } catch (error) {
                 callBack(null);
             }
@@ -516,10 +569,11 @@ class Server extends colyseus.Room {
             if (data == 'null') {
                 callBack(null);
             }
-            if (data.s == 'no_data' || !('s' in data) || data.s != 'ok') {
+            else if (!('s' in data) || data.s == 'no_data' || data.s != 'ok') {
                 callBack(null);
             }
-            return callBack(data);
+            else
+                callBack(data);
         });
     }
     parseJson(body) {
