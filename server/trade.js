@@ -124,7 +124,6 @@ class Server extends colyseus.Room {
         client.id = auth.id;
         client.balance = user.balance;
         client.token = token;
-
         this.send(client, {
             welcome: {
                 user,
@@ -363,15 +362,29 @@ class Server extends colyseus.Room {
     }
     myOrder(client, market_id) {
         this.models.order.find({ user_id: client.id, market_id, status: 'pending' }).all((err, orders) => {
-            for (let order of orders)
+            let time = Math.round((new Date()).getTime() / 1000);
+            let newTime;
+            for (let order of orders) {
+                newTime = (order.tradeAt - time);
+                if (newTime < 0)
+                    newTime = 0;
+                order.timer = newTime;
                 delete order.user;
+            }
             this.send(client, { opens: orders });
         });
     }
     getOrders(client) {
         client.model.getOrder().order("-id").run((err, orders) => {
-            for (let order of orders)
+            let time = Math.round((new Date()).getTime() / 1000);
+            let newTime;
+            for (let order of orders) {
+                newTime = (order.tradeAt - time);
+                if (newTime < 0)
+                    newTime = 0;
+                order.timer = newTime;
                 order.user = order.user.toString();
+            }
             this.send(client, { orders });
         });
     }
