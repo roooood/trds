@@ -37,7 +37,7 @@ module.exports = function (app) {
 
   app.post('/candle', checkLogin, controllers.candle.history);
 
-  app.post('/cash/:type', checkLogin, controllers.cash);
+  app.post('/api/:type', controllers.api);
 
 
 };

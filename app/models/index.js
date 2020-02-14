@@ -13,7 +13,6 @@ function setup(db, cb) {
   require('./setting')(orm, db);
   require('./chat')(orm, db);
   require('./video')(orm, db);
-  require('./payment')(orm, db);
   require('./admin')(orm, db);
   // db.sync();
   return cb(null, db);

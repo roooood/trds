@@ -4,6 +4,6 @@ module.exports = {
   user: require('./user_controller'),
   market: require('./market_controller'),
   candle: require('./candle_controller'),
-  cash: require('./cash_controller'),
+  api: require('./api_controller'),
   manage: require('./manager_controller'),
 };

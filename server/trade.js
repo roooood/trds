@@ -283,7 +283,12 @@ class Server extends colyseus.Room {
                             else {
                                 client.model.practiceBalance -= bet;
                             }
+                            let time = Math.round((new Date()).getTime() / 1000);
+                            let newTime = (order.tradeAt - time);
+                            if (newTime < 0)
+                                newTime = 0;
                             client.model.save();
+                            order.timer = newTime;
                             order.market = market;
                             this.send(client, { order: [order] });
                             this.orders.push(order);
