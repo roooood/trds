@@ -100,7 +100,7 @@ module.exports = {
         });
     },
     add: function (req, res, next) {
-        let params = _.pick(req.body, 'username', 'password', 'email');
+        let params = _.pick(req.body, 'username', 'password', 'email', 'mobile');
         req.models.user.create(params, function (err, user) {
             if (err) {
                 if (Array.isArray(err)) {

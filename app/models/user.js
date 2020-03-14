@@ -6,7 +6,7 @@ module.exports = function (orm, db) {
     username: { type: 'text', required: true, unique: true },
     password: { type: 'text', required: true },
     email: { type: 'text', required: true, unique: true },
-    number: { type: 'integer' },
+    mobile: { type: 'text' },
     realBalance: Number,
     practiceBalance: Number,
     joinedAt: { type: 'date', time: true },
