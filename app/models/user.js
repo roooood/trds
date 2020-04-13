@@ -12,7 +12,9 @@ module.exports = function (orm, db) {
     joinedAt: { type: 'date', time: true },
     lastSeen: { type: 'date', time: true },
     status: Boolean,
-    token: String
+    token: String,
+    lang: String,
+    currency: String,
   },
     {
       hooks: {

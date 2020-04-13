@@ -118,8 +118,16 @@ class Server extends colyseus.Room {
         }
         this.online++;
         client.model = auth;
+        let currency = 1;
+        if (auth.currency != '') {
+            let n = 'usd_' + auth.currency;
+            if (n in this.setting) {
+                currency = this.setting[n];
+            }
+        }
         let user = {
             id: auth.id,
+            currency: currency,
             username: auth.username,
             balance: {
                 real: auth.realBalance,
