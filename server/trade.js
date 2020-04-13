@@ -132,7 +132,9 @@ class Server extends colyseus.Room {
             balance: {
                 real: auth.realBalance,
                 practice: auth.practiceBalance,
-            }
+            },
+            cur: auth.currency,
+            lang: auth.lang
         }
         let token = await this.getToken();
         let market = await this.getDefaultMarket(true);
