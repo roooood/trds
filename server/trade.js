@@ -96,8 +96,12 @@ class Server extends colyseus.Room {
         }
 
         return new Promise((resolve, reject) => {
-            this.models.user.find({ token: options.key }, 1, (err, user) => {
-                resolve(user[0])
+            this.models.user.one({ token: options.key }, 1, (err, user) => {
+                if (user == null) {
+                    resolve({invalid:true})
+                }
+                else 
+                    resolve(user)
             });
         });
     }
@@ -106,6 +110,10 @@ class Server extends colyseus.Room {
             client.admin = true;
             this.send(client, { welcome: true });
             this.getAdminData();
+            return;
+        }
+        else if ('invalid' in auth) {
+            this.send(client, { user: 'invalid' });
             return;
         }
         this.online++;

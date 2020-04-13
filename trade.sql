@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 14, 2020 at 07:13 PM
+-- Generation Time: Apr 13, 2020 at 12:30 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.4
 
@@ -804,7 +804,12 @@ INSERT INTO `order` (`id`, `balanceType`, `tradeType`, `price`, `point`, `tradeA
 (2, 'practice', 'buy', 0.019262, 1579301743, 1579301803, 'done', 1, 50, 0, '2020-01-18 02:25:43', 1, 1),
 (3, 'practice', 'buy', 0.019254, 1579301823, 1579301883, 'done', 1, 50, 0, '2020-01-18 02:27:02', 1, 1),
 (4, 'practice', 'buy', 0.019257, 1579301871, 1579301931, 'done', 1, 50, 0, '2020-01-18 02:27:51', 1, 1),
-(5, 'practice', 'buy', 0.019246, 1579301906, 1579301966, 'done', 1, 50, 0, '2020-01-18 02:28:25', 1, 1);
+(5, 'practice', 'buy', 0.019246, 1579301906, 1579301966, 'done', 1, 50, 0, '2020-01-18 02:28:25', 1, 1),
+(6, 'real', 'sell', 0.020852, 1585564640, 1585564700, 'done', 1, 50, 0.5, '2020-03-30 03:37:20', 1, 1),
+(7, 'real', 'buy', 6433.26, 1585648717, 1585648837, 'done', 3, 50, 1.5, '2020-03-31 02:58:37', 1, 12),
+(8, 'real', 'buy', 0.020665, 1585657131, 1585657371, 'done', 4, 50, 2, '2020-03-31 05:18:51', 1, 1),
+(9, 'real', 'buy', 0.020557, 1585672715, 1585672775, 'done', 1, 50, 0, '2020-03-31 09:38:34', 1, 1),
+(10, 'real', 'sell', 0.020546, 1585672728, 1585672788, 'done', 1, 50, 0, '2020-03-31 09:38:47', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -826,7 +831,7 @@ INSERT INTO `setting` (`id`, `key`, `value`) VALUES
 (1, 'tradePriceMax', '5000'),
 (2, 'tradeTimeMax', '30'),
 (3, 'chartType', 'candle'),
-(4, 'reolution', '1m'),
+(4, 'reolution', '1h'),
 (5, 'maxData', '200'),
 (6, 'balanceType', 'real'),
 (7, 'tradePercent', '0'),
@@ -873,15 +878,17 @@ CREATE TABLE `user` (
   `joinedAt` datetime DEFAULT NULL,
   `lastSeen` datetime DEFAULT NULL,
   `status` tinyint(1) DEFAULT NULL,
-  `token` varchar(255) DEFAULT NULL
+  `token` varchar(255) DEFAULT NULL,
+  `lang` varchar(3) NOT NULL,
+  `currency` varchar(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `user`
 --
 
-INSERT INTO `user` (`id`, `username`, `password`, `email`, `mobile`, `realBalance`, `practiceBalance`, `joinedAt`, `lastSeen`, `status`, `token`) VALUES
-(1, 'siavasham', 'a2550eeab0724a691192ca13982e6ebd', 'sayeh.2010@ymail.com', '+98 935 063 434 3', 150, 10000, '2020-02-15 01:09:20', '2020-02-15 01:09:20', 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNTgxNzE2MzYwfQ.U02YAgdbzNPfkY8QUxhxYcPMn3YHTUyNhnXpI67oFcU');
+INSERT INTO `user` (`id`, `username`, `password`, `email`, `mobile`, `realBalance`, `practiceBalance`, `joinedAt`, `lastSeen`, `status`, `token`, `lang`, `currency`) VALUES
+(1, 'siavasham', 'a2550eeab0724a691192ca13982e6ebd', 'sayeh.2010@ymail.com', '+98 935 063 434 3', 152, 10000, '2020-02-15 01:09:20', '2020-02-15 01:09:20', 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNTgxNzE2MzYwfQ.U02YAgdbzNPfkY8QUxhxYcPMn3YHTUyNhnXpI67oFcU', 'fa', 'rial');
 
 -- --------------------------------------------------------
 
@@ -1025,7 +1032,7 @@ ALTER TABLE `market`
 -- AUTO_INCREMENT for table `order`
 --
 ALTER TABLE `order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `setting`
