@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 13, 2020 at 12:30 PM
+-- Generation Time: Apr 14, 2020 at 02:22 AM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.4
 
@@ -809,7 +809,10 @@ INSERT INTO `order` (`id`, `balanceType`, `tradeType`, `price`, `point`, `tradeA
 (7, 'real', 'buy', 6433.26, 1585648717, 1585648837, 'done', 3, 50, 1.5, '2020-03-31 02:58:37', 1, 12),
 (8, 'real', 'buy', 0.020665, 1585657131, 1585657371, 'done', 4, 50, 2, '2020-03-31 05:18:51', 1, 1),
 (9, 'real', 'buy', 0.020557, 1585672715, 1585672775, 'done', 1, 50, 0, '2020-03-31 09:38:34', 1, 1),
-(10, 'real', 'sell', 0.020546, 1585672728, 1585672788, 'done', 1, 50, 0, '2020-03-31 09:38:47', 1, 1);
+(10, 'real', 'sell', 0.020546, 1585672728, 1585672788, 'done', 1, 50, 0, '2020-03-31 09:38:47', 1, 1),
+(11, 'practice', 'buy', 6851.2, 1586817950, 1586818010, 'done', 1, 50, 0.5, '2020-04-14 03:15:49', 1, 12),
+(12, 'practice', 'sell', 6848, 1586818054, 1586818114, 'done', 2, 50, 0, '2020-04-14 03:17:34', 1, 12),
+(13, 'practice', 'buy', 6849.59, 1586818285, 1586818345, 'done', 1, 50, 0.5, '2020-04-14 03:21:24', 1, 12);
 
 -- --------------------------------------------------------
 
@@ -831,12 +834,13 @@ INSERT INTO `setting` (`id`, `key`, `value`) VALUES
 (1, 'tradePriceMax', '5000'),
 (2, 'tradeTimeMax', '30'),
 (3, 'chartType', 'candle'),
-(4, 'reolution', '1h'),
+(4, 'reolution', 'H'),
 (5, 'maxData', '200'),
 (6, 'balanceType', 'real'),
 (7, 'tradePercent', '0'),
 (9, 'profit', '50'),
-(10, 'defaultMarket', '1');
+(10, 'defaultMarket', '1'),
+(11, 'usd_rial', '16500');
 
 -- --------------------------------------------------------
 
@@ -888,7 +892,7 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id`, `username`, `password`, `email`, `mobile`, `realBalance`, `practiceBalance`, `joinedAt`, `lastSeen`, `status`, `token`, `lang`, `currency`) VALUES
-(1, 'siavasham', 'a2550eeab0724a691192ca13982e6ebd', 'sayeh.2010@ymail.com', '+98 935 063 434 3', 152, 10000, '2020-02-15 01:09:20', '2020-02-15 01:09:20', 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNTgxNzE2MzYwfQ.U02YAgdbzNPfkY8QUxhxYcPMn3YHTUyNhnXpI67oFcU', 'fa', 'rial');
+(1, 'siavasham', 'a2550eeab0724a691192ca13982e6ebd', 'sayeh.2010@ymail.com', '+98 935 063 434 3', 152, 10000.5, '2020-02-15 01:09:20', '2020-02-15 01:09:20', 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNTgxNzE2MzYwfQ.U02YAgdbzNPfkY8QUxhxYcPMn3YHTUyNhnXpI67oFcU', 'en', 'usd');
 
 -- --------------------------------------------------------
 
@@ -1032,13 +1036,13 @@ ALTER TABLE `market`
 -- AUTO_INCREMENT for table `order`
 --
 ALTER TABLE `order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `setting`
 --
 ALTER TABLE `setting`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `tokens`

@@ -214,6 +214,24 @@ class Server extends colyseus.Room {
                 case 'get':
                     this['get' + value](client);
                     break;
+                case 'currency':
+                    this.models.user.get(client.id, (err, user) => {
+                        user.currency = value;
+                        user.save();
+                    });
+                    let currency = 1;
+                    let n = 'usd_' + value;
+                    if (n in this.setting) {
+                        currency = this.setting[n];
+                    }
+                    this.send(client, { currency})
+                    break;
+                case 'lang':
+                    this.models.user.get(client.id, (err, user) => {
+                        user.lang = value;
+                        user.save();
+                    });
+                    break;
             }
         }
     }
